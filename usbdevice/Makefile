@@ -27,11 +27,14 @@ SDK_PATH:= /Users/frodeja/Documents/Skole/TDT4295/efm32_sdk/v4.4.1
 
 #Path to toolchain binaries
 TOOLCHAIN_PATH:=/usr/local/arm-none-eabi/gcc-arm-none-eabi-5_4-2016q3/bin
+JLINK_PATH:=/Applications/SEGGER/JLink
+
 
 CC:=$(TOOLCHAIN_PATH)/arm-none-eabi-gcc
 LD:=$(TOOLCHAIN_PATH)/arm-none-eabi-gcc
 OBJCOPY:=$(TOOLCHAIN_PATH)/arm-none-eabi-objcopy
 OBJDUMP:=$(TOOLCHAIN_PATH)/arm-none-eabi-objdump
+JLINK:=$(JLINK_PATH)/JLinkExe
 
 ##############################################################
 #                            FLAGS                           #
@@ -134,7 +137,7 @@ vpath %.S $(S_PATHS)
 #                        BUILD RULES                         #
 ##############################################################
 
-.PHONY : all stk devkit debug nodebug clean dirclean test
+.PHONY : all stk devkit debug nodebug clean dirclean upload
 
 test :
 	@echo "INCLUDES \n"
@@ -203,8 +206,21 @@ $(BINDIR) :
 $(LSTDIR) :
 	mkdir $@
 
+upload : upload_bin.jlink
+	$(JLINK) -commanderscript $<
+
+upload_bin.jlink :
+	@echo "si 1\n\
+		   speed 4000\n\
+		   device EFM32GG990F1024\n\
+		   erase\n\
+		   loadbin bin/efm32gg_usb_device.bin, 0x0\n\
+		   r\n\
+		   g\n\
+		   q\n" > $@	
+
 clean : $(OBJDIR) $(LSTDIR) $(BINDIR)
-	rm -f $(OBJDIR)/*.* $(LSTDIR)/*.* $(BINDIR)/*.*
+	rm -f $(OBJDIR)/*.* $(LSTDIR)/*.* $(BINDIR)/*.* upload_bin.jlink
 
 dirclean :
 	@echo "$(YELLOW_COLOR)Removing all created files and directories$(NO_COLOR)"
