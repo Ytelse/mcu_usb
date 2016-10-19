@@ -24,6 +24,7 @@
 
 // /* Indicates whether a write (OUT transaction is currently pending */
 bool pendingWrite = false;
+bool pendingReceive = false;
 
 // void *async_read_context = NULL;
 // void *async_write_context = NULL;
@@ -70,6 +71,7 @@ static void LIBUSB_CALL tickWriteFinished(struct libusb_transfer* transfer) {
 
 void sendMessage(libusb_device_handle* efm_handle, unsigned char* message, int msgSize) {
 	struct libusb_transfer* transfer = NULL;
+	int rc;
 	//Allocate a transfer with 0 isochronous packages
 	transfer = libusb_alloc_transfer(0);
 
@@ -84,6 +86,48 @@ void sendMessage(libusb_device_handle* efm_handle, unsigned char* message, int m
 		1000
 	);
 
-	libusb_submit_transfer(transfer);
-	pendingWrite = true;
+	rc = libusb_submit_transfer(transfer);
+	if (rc == LIBUSB_ERROR_NO_DEVICE) {
+		printf("Device has disconnected!\n");
+	} else if (rc == LIBUSB_ERROR_BUSY) {
+		printf("transfer already submitted!\n");
+	} else if (rc == LIBUSB_ERROR_NOT_SUPPORTED){
+		printf("Transfer flags not supported!\n");
+	} else {
+		pendingWrite = true;
+	}
+}
+
+static void LIBUSB_CALL dataReceived(struct libusb_transfer* transfer) {
+	printf("Received data from device!\n");
+	libusb_free_transfer(transfer);
+	pendingReceive = false;
+}
+
+void receiveMessage(libusb_device_handle* efm_handle, unsigned char* buffer) {
+	struct libusb_transfer* transfer = NULL;
+	int rc;
+
+	transfer = libusb_alloc_transfer(0);
+
+	libusb_fill_bulk_transfer(
+		transfer,
+		efm_handle,
+		EP_IN,
+		buffer,
+		64,
+		&dataReceived,
+		NULL,
+		10000
+	);
+
+	rc = libusb_submit_transfer(transfer);
+
+	if (rc) {
+
+	} else {
+		
+	}
+
+	pendingReceive = true;
 }

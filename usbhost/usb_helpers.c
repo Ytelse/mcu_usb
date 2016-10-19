@@ -80,7 +80,3 @@ void get_device_names(libusb_context* context) {
 	}
 	libusb_free_device_list(device_list, 1);
 }
-
-int get_endpoint_descriptors(libusb_context* context, libusb_device_handle* dev_handle, struct libusb_endpoint_descriptor** ep_descs, int* num_ep_descs) {
-	return 0;
-}

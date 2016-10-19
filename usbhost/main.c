@@ -15,9 +15,11 @@
 
 // /* Data to send to device every tick */
 static unsigned char tickMessage[] = "tick";
+static unsigned char receiveBuffer[512];
 static int tickMessageLength = 4;
 
 extern bool pendingWrite;
+extern bool pendingReceive;
 
 /* Function prototypes */
 void printStartupMsg(void);
@@ -53,6 +55,8 @@ int main(void) {
 	libusb_claim_interface(efm_handle, 0);
 	debugprint("Successfully claimed EFM32 USB interface 0!", GREEN);
 
+	memset(receiveBuffer, "-", 512);
+
 	while (1) {
 		debugprint("Attempting to send tick message to EFM32", BLUE);
 		if (pendingWrite) {
@@ -61,24 +65,23 @@ int main(void) {
 			sendMessage(efm_handle, tickMessage, tickMessageLength);
 			debugprint("Message sent!", GREEN);
 		}
+
+		if (pendingReceive) {
+			debugprint("Still waiting for message!", RED);
+		} else {
+			debugprint("Setting up receive...", GREEN);
+			memset(receiveBuffer, "-", 512);
+			receiveMessage(efm_handle, receiveBuffer);
+		}
+
+		printf("receiveBuffer = %s\n", receiveBuffer);
+
 		libusb_handle_events(context);
 		usleep(500000);
 	}
 
-
-	sendMsgs(efm_handle, context);
-
 	libusb_close(efm_handle);
 	libusb_exit(NULL);
-}
-
-void sendMsgs(libusb_device_handle* efm_handle, libusb_context* context) {
-
-	for (int i = 0; i < 20; i++) {
-		debugprint("Attempting to send tick message to EFM32", BLUE);
-		sendMessage(efm_handle, tickMessage, tickMessageLength);
-		while (pendingWrite) {libusb_handle_events(context);}
- 	}
 }
 
 void printStartupMsg(void) {
