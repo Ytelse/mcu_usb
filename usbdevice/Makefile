@@ -7,29 +7,33 @@
 #                        DEFINITIONS                         #
 ##############################################################
 
+# Name of device we are developing for
 DEVICE:=EFM32GG990F1024
+# This will be the name of the binary after all compilation is done
 TARGET:=efm32gg_usb_device
 
+# Directories
 OBJDIR:= build
 BINDIR:= bin
 LSTDIR:= lst
 
-#ANSI color codes
+# ANSI color codes
+# Only used for fancy output
 NO_COLOR=\x1b[0m
 YELLOW_COLOR=\x1b[33;01m
 
-#Overwrite this to point to the SDK on the machine it will build on
+# Overwrite this to point to the EFM32 SDK on the machine it will build on
 SDK_PATH:= /Users/frodeja/Documents/Skole/TDT4295/efm32_sdk/v4.4.1
 
 ##############################################################
 #                          TOOLCHAIN                         #
 ##############################################################
 
-#Path to toolchain binaries
+# Path to toolchain folders
 TOOLCHAIN_PATH:=/usr/local/arm-none-eabi/gcc-arm-none-eabi-5_4-2016q3/bin
 JLINK_PATH:=/Applications/SEGGER/JLink
 
-
+# Toolchain aliases
 CC:=$(TOOLCHAIN_PATH)/arm-none-eabi-gcc
 LD:=$(TOOLCHAIN_PATH)/arm-none-eabi-gcc
 OBJCOPY:=$(TOOLCHAIN_PATH)/arm-none-eabi-objcopy
@@ -40,10 +44,13 @@ JLINK:=$(JLINK_PATH)/JLinkExe
 #                            FLAGS                           #
 ##############################################################
 
+# Generate dependency list, not working properly ATM
+# Only generates a dependency list for the last compiled file
+# and puts it in lst/efm32gg_usb_device_dependencies.d
 # -MMD : Don't generate dependencies on system header files.
 # -MP  : Add phony targets, useful when a h-file is removed from a project.
 # -MF  : Specify a file to write the dependencies to.
-DEPFLAGS:=-MMD -MP -MF $(LSTDIR)/$(TARGET).d
+DEPFLAGS:=-MMD -MP -MF $(LSTDIR)/$(TARGET)_dependencies.d
 
 #C compiler flags
 CFLAGS:=-D$(DEVICE) -Wall -Wextra -mcpu=cortex-m3 -mthumb -mfix-cortex-m3-ldrd \
@@ -63,7 +70,7 @@ LDFLAGS:= -Xlinker -Map=$(LSTDIR)/$(TARGET).map -mcpu=cortex-m3 \
 
 LIBS = -Wl,--start-group -lgcc -lc -lnosys -Wl,--end-group
 
-#Include the EFM32 SDK
+# Include the entire EFM32 SDK
 INCLUDEPATHS += $(addprefix -I$(SDK_PATH), \
 /CMSIS/Include \
 /Device/SiliconLabs/EFM32GG/Include \
@@ -72,8 +79,10 @@ INCLUDEPATHS += $(addprefix -I$(SDK_PATH), \
 /kits/common/drivers \
 /kits/common/bsp \
 /kits/EFM32GG_STK3700/config \
+/kits/EFM32GG_DK3750/config \
 )
-#Include local headers
+# Include local headers
+# Assuming header files are found in the src directory, edit this as necessary
 INCLUDEPATHS += -Isrc
 
 ##############################################################
@@ -81,6 +90,9 @@ INCLUDEPATHS += -Isrc
 ##############################################################
 
 # emlib / SiliconLabs / etc. C sources
+# Add files to this list as they are needed
+# If you get some error saying "unknown symbol", it is most
+# likely caused by a source not being in this list
 
 CSRC := $(addprefix $(SDK_PATH), \
 /Device/SiliconLabs/EFM32GG/Source/system_efm32gg.c \
@@ -108,6 +120,7 @@ CSRC := $(addprefix $(SDK_PATH), \
 )
 
 # Local C sources
+# Add all sources used locally
 
 CSRC += \
 src/main.c \
@@ -140,7 +153,7 @@ vpath %.S $(S_PATHS)
 #                        BUILD RULES                         #
 ##############################################################
 
-.PHONY : all stk devkit debug nodebug clean dirclean upload
+.PHONY : all stk devkit debug nodebug clean upload
 
 test :
 	@echo "INCLUDES \n"
@@ -223,12 +236,4 @@ upload_bin.jlink :
 		   q\n" > $@	
 
 clean : $(OBJDIR) $(LSTDIR) $(BINDIR)
-	rm -f $(OBJDIR)/*.* $(LSTDIR)/*.* $(BINDIR)/*.* upload_bin.jlink
-
-dirclean :
-	@echo "$(YELLOW_COLOR)Removing all created files and directories$(NO_COLOR)"
-	rm -f $(OBJDIR)/*.* $(LSTDIR)/*.* $(BINDIR)/*.*
-	rmdir $(OBJDIR) $(LSTDIR) $(BINDIR)
-
-
-
+	rm -rf $(OBJDIR) $(LSTDIR) $(BINDIR) upload_bin.jlink
