@@ -102,6 +102,9 @@ CSRC := $(addprefix $(SDK_PATH), \
 /usb/src/em_usbdint.c \
 /usb/src/em_usbhal.c \
 /usb/src/em_usbtimer.c \
+/kits/common/bsp/bsp_bcc.c \
+/kits/common/bsp/bsp_stk.c \
+/kist/common/bsp/bsp_stk_leds.c \
 )
 
 # Local C sources
