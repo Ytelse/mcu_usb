@@ -96,7 +96,6 @@ INCLUDEPATHS += -Isrc
 
 CSRC := $(addprefix $(SDK_PATH), \
 /Device/SiliconLabs/EFM32GG/Source/system_efm32gg.c \
-/kits/common/drivers/segmentlcd.c \
 /kits/common/drivers/retargetio.c \
 /kits/common/drivers/retargettft.c \
 /emlib/src/em_assert.c \
@@ -108,6 +107,7 @@ CSRC := $(addprefix $(SDK_PATH), \
 /emlib/src/em_int.c \
 /emlib/src/em_lcd.c \
 /emlib/src/em_usart.c \
+/emlib/src/em_ebi.c \
 /usb/src/em_usbd.c \
 /usb/src/em_usbdch9.c \
 /usb/src/em_usbdep.c \
