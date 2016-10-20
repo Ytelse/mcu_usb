@@ -155,7 +155,7 @@ int dataReceivedCallback(USB_Status_TypeDef status, uint32_t xferred, uint32_t r
       /* Increase the number on the LCD */
 #ifdef STK
       SegmentLCD_Number(++tickCounter);
-      BSP_LedsSet(0x00FF * (tickCounter % 2));
+      BSP_LedsSet(0xFFFF * (tickCounter % 2));
 #endif
     }
     

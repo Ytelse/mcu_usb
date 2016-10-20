@@ -10,7 +10,7 @@
 # Name of device we are developing for
 DEVICE:=EFM32GG990F1024
 # This will be the name of the binary after all compilation is done
-TARGET:=efm32gg_usb_device
+TARGET:=efm32gg_stk_usb_device
 
 # Directories
 OBJDIR:= build
@@ -153,27 +153,19 @@ vpath %.S $(S_PATHS)
 #                        BUILD RULES                         #
 ##############################################################
 
-.PHONY : all stk devkit debug nodebug clean upload
+.PHONY : all stk debug clean upload
 
-#Default to devkit for now
-all : devkit
+all : stk
 
 stk : CFLAGS += -DSTK
 stk : ASFLAGS += -DSTK
 stk : INCLUDEPATHS += $(addprefix -I$(SDK_PATH), /kits/common/drivers /kits/common/bsp /kits/EFM32GG_STK3700/config)
 stk : debug
 
-devkit : CFLAGS += -DDEVKIT
-devkit : ASFLAGS += -DDEVKIT
-devkit : INCLUDEPATHS += $(addprefix -I$(SDK_PATH), /kits/common/drivers /kits/common/bsp /kits/EFM32GG_DK3750/config)
-devkit : debug
-
 debug : CFLAGS += -DDEBUG -O0 -g
 debug : $(BINDIR)/$(TARGET).bin
 
-#Attempt at -O2, maybe it wont work
-nodebug : CFLAGS -DNODEBUG -O2 -g
-nodebug : $(BINDIR)/$(TARGET).bin
+#TODO: Add nodebug/release target. Not necessary yet.
 
 # Compile C sources into objects
 $(OBJDIR)/%.o : %.c | $(OBJDIR) $(LSTDIR)

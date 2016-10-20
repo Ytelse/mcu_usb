@@ -1,5 +1,5 @@
 /**************************************************************************//**
- * @file main_stk.c
+ * @file main_dk.c
  * @brief USB Device Example
  * @author Silicon Labs
  * @version 1.02
@@ -32,6 +32,7 @@
  ******************************************************************************/
 #include <string.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "em_device.h"
 #include "em_chip.h"
 #include "em_cmu.h"
@@ -41,14 +42,13 @@
 #include "bsp.h"
 #include "callbacks.h"
 #include "descriptors.h"
-#include "retargetserial.h"
-#include "segmentlcd.h"
+#include "retargettft.h"
+
 
 /* Messages to send when the user presses buttons on the kit */
-EFM32_ALIGN(4)
-uint8_t button0message[] = "PB0 pressed!";
-EFM32_ALIGN(4)
 uint8_t button1message[] = "PB1 pressed!";
+EFM32_ALIGN(4)
+uint8_t button2message[] = "PB2 pressed!";
 
 /**********************************************************
  * Enable GPIO interrupts on both push buttons on the STK
@@ -57,18 +57,18 @@ void gpioInit(void)
 {
   /* Enable clock to GPIO */
   CMU_ClockEnable(cmuClock_GPIO, true);
-   
-  /* Enable interrupt on push button 0 */
-  GPIO_PinModeSet(gpioPortB, 9, gpioModeInput, 0);
-  GPIO_IntConfig(gpioPortB, 9, false, true, true);
-  NVIC_ClearPendingIRQ(GPIO_ODD_IRQn);
-  NVIC_EnableIRQ(GPIO_ODD_IRQn);
   
-  /* Enable interrupt on push button 1 */
-  GPIO_PinModeSet(gpioPortB, 10, gpioModeInput, 0);
-  GPIO_IntConfig(gpioPortB, 10, false, true, true);
+  /* Enable interrupt on PE0 (Board controller) */
+  GPIO_PinModeSet(gpioPortE, 0, gpioModeInputPull, 1);
+  GPIO_IntConfig(gpioPortE, 0, false, true, true);
+  
+  /* Enable BC interrupt generation from push buttons */
+  BSP_Init(BSP_INIT_DK_EBI);
+  BSP_InterruptEnable(BC_INTEN_PB);
+  
   NVIC_ClearPendingIRQ(GPIO_EVEN_IRQn);
   NVIC_EnableIRQ(GPIO_EVEN_IRQn);
+
 }   
 
 
@@ -76,21 +76,16 @@ int main(void)
 {
   /* Chip errata */
   CHIP_Init();
-
-  BSP_Init(BSP_INIT_BCC);
-  BSP_LedsInit();
   
   /* Enable HFXO */
   CMU_ClockSelectSet(cmuClock_HF, cmuSelect_HFXO);
+  
+  BSP_Init(BSP_INIT_DEFAULT);   
+  
+  /* Enable debug output over UART */
+  RETARGET_TftInit();                     
+  RETARGET_TftCrLf(1); 
     
-  /* Enable deboug output over UART */
-  RETARGET_SerialInit();                     
-  RETARGET_SerialCrLf(1); 
-  
-  /* Enable the segment LCD */
-  SegmentLCD_Init(false);
-  SegmentLCD_Write("USB");
-  
   printf("\nStarting USB Device...\n");
   
   /* Set up GPIO interrupts */
@@ -123,27 +118,31 @@ int main(void)
   } 
 }
 
-/**********************************************************
- * Interrupt handler for push button 0 
- **********************************************************/
-void GPIO_ODD_IRQHandler(void)
-{
-  /* Clear the interrupt flag */
-  GPIO->IFC = 1 << 9;
-  
-  /* Send message */
-  USBD_Write(EP_IN, button0message, sizeof(button0message), dataSentCallback);
-}
 
 /**********************************************************
- * Interrupt handler for push button 1
+ * Interrupt handler for push buttons on DK  
  **********************************************************/
 void GPIO_EVEN_IRQHandler(void)
 {
-  /* Clear the interrupt flag */
-  GPIO->IFC = 1 << 10;
-  
-  /* Send message */
-  USBD_Write(EP_IN, button1message, sizeof(button1message), dataSentCallback);
+  /* Get and clear flags */
+  uint32_t flags = GPIO->IF;
+  GPIO->IFC = flags;
+    
+  if ( flags & (1 << 0) )  /* Interrupt on PE0 */
+  {
+    uint16_t bspFlags = BSP_InterruptFlagsGet();
+    BSP_InterruptFlagsClear(bspFlags);
+    if ( bspFlags & BC_INTFLAG_PB )     /* Interrupt caused by push buttons */
+    {
+      uint16_t buttons = BSP_PushButtonsGet();
+      if ( buttons & (1 << 0) ) /* PB1 was pressed */
+      {
+        USBD_Write(EP_IN, button1message, sizeof(button1message), dataSentCallback);
+      }
+      if ( buttons & (1 << 1) ) /* PB2 was pressed */
+      {
+        USBD_Write(EP_IN, button2message, sizeof(button2message), dataSentCallback);
+      }
+    }
+  }
 }
-

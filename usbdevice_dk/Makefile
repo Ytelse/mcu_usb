@@ -10,7 +10,7 @@
 # Name of device we are developing for
 DEVICE:=EFM32GG990F1024
 # This will be the name of the binary after all compilation is done
-TARGET:=efm32gg_usb_device
+TARGET:=efm32gg_dk_usb_device
 
 # Directories
 OBJDIR:= build
@@ -76,9 +76,9 @@ INCLUDEPATHS += $(addprefix -I$(SDK_PATH), \
 /Device/SiliconLabs/EFM32GG/Include \
 /emlib/inc \
 /usb/inc \
+/reptile/glib \
 /kits/common/drivers \
 /kits/common/bsp \
-/kits/EFM32GG_STK3700/config \
 /kits/EFM32GG_DK3750/config \
 )
 # Include local headers
@@ -98,7 +98,7 @@ CSRC := $(addprefix $(SDK_PATH), \
 /Device/SiliconLabs/EFM32GG/Source/system_efm32gg.c \
 /kits/common/drivers/segmentlcd.c \
 /kits/common/drivers/retargetio.c \
-/kits/common/drivers/retargetserial.c \
+/kits/common/drivers/retargettft.c \
 /emlib/src/em_assert.c \
 /emlib/src/em_system.c \
 /emlib/src/em_gpio.c \
@@ -114,9 +114,12 @@ CSRC := $(addprefix $(SDK_PATH), \
 /usb/src/em_usbdint.c \
 /usb/src/em_usbhal.c \
 /usb/src/em_usbtimer.c \
-/kits/common/bsp/bsp_bcc.c \
-/kits/common/bsp/bsp_stk.c \
-/kist/common/bsp/bsp_stk_leds.c \
+/kits/common/bsp/bsp_dk_3201.c \
+/kits/common/bsp/bsp_dk_leds.c \
+/kits/common/bsp/bsp_dk_mcuboard.c \
+/kits/common/bsp/bsp_trace.c \
+/reptile/glib/dmd/ssd2119/dmd_ssd2119_16bit.c \
+/reptile/glib/dmd/ssd2119/dmdif_ssd2119_ebi16.c \
 )
 
 # Local C sources

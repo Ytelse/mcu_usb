@@ -35,3 +35,9 @@
 *.su
 
 usbhost/usb_host
+usbdevice_stk/bin
+usbdevice_stk/lst
+usbdevice_stk/build
+usbdevice_dk/bin
+usbdevice_dk/lst
+usbdevice_dk/build
