@@ -155,18 +155,6 @@ vpath %.S $(S_PATHS)
 
 .PHONY : all stk devkit debug nodebug clean upload
 
-test :
-	@echo "INCLUDES \n"
-	@echo "$(INCLUDEPATHS) \n"
-	@echo "OBJECT PATHS \n"
-	@echo "$(OBJS) \n"
-	@echo "C PATHS \n"
-	@echo "$(C_PATHS) \n"
-	@echo "C FILES \n"
-	@echo "$(C_FILES) \n"
-	@echo "C SOURCES \n"
-	@echo "$(CSRC) \n"
-
 #Default to devkit for now
 all : devkit
 
@@ -222,15 +210,28 @@ $(BINDIR) :
 $(LSTDIR) :
 	mkdir $@
 
+# Upload the binary to the MCU (if it is connected) using JLink
+# Remove the commanderscript after use to remove clutter and
+# to force updates if anything is changed in the Makefile
 upload : upload_bin.jlink
 	$(JLINK) -commanderscript $<
+	rm -f upload_bin.jlink
 
+# Create commanderscript for JLinkExe
+# si 1 									-- Use SWD for debugging
+# speed 4000 							-- default speed setting
+# device EFM32GG990F1024				-- target device
+# erase 								-- erase any flash currently on the device
+# loadbin $(BINDIR)/$(TARGET).bin, 0x0 	-- load the project binary into address 0x0
+# r 									-- reset device
+# g 									-- run (go) device
+# q 									-- quit JLinkExe
 upload_bin.jlink :
 	@echo "si 1\n\
 		   speed 4000\n\
 		   device EFM32GG990F1024\n\
 		   erase\n\
-		   loadbin bin/efm32gg_usb_device.bin, 0x0\n\
+		   loadbin $(BINDIR)/$(TARGET).bin, 0x0\n\
 		   r\n\
 		   g\n\
 		   q\n" > $@	
