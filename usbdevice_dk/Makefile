@@ -156,15 +156,10 @@ vpath %.S $(S_PATHS)
 #                        BUILD RULES                         #
 ##############################################################
 
-.PHONY : all stk devkit debug nodebug clean upload
+.PHONY : all devkit debug clean upload
 
 #Default to devkit for now
 all : devkit
-
-stk : CFLAGS += -DSTK
-stk : ASFLAGS += -DSTK
-stk : INCLUDEPATHS += $(addprefix -I$(SDK_PATH), /kits/common/drivers /kits/common/bsp /kits/EFM32GG_STK3700/config)
-stk : debug
 
 devkit : CFLAGS += -DDEVKIT
 devkit : ASFLAGS += -DDEVKIT
@@ -174,9 +169,7 @@ devkit : debug
 debug : CFLAGS += -DDEBUG -O0 -g
 debug : $(BINDIR)/$(TARGET).bin
 
-#Attempt at -O2, maybe it wont work
-nodebug : CFLAGS -DNODEBUG -O2 -g
-nodebug : $(BINDIR)/$(TARGET).bin
+#TODO: Add nodebug/release target. Not necessary yet.
 
 # Compile C sources into objects
 $(OBJDIR)/%.o : %.c | $(OBJDIR) $(LSTDIR)
