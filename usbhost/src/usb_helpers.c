@@ -84,7 +84,7 @@ void get_device_names(libusb_context* context) {
 /* Returns length of name stored in stringBuffer, if return value < 0 the name fetching failed */
 /* Supplied buffer should be at least 200 bytes just to be sure */
 int getDeviceName(libusb_device_handle* dev_handle, char* stringBuffer, int bufferLength) {
-		int rc = 0, mlength = 0, plength = 0, nameLength = 0;
+		int rc = 0, mlength = 0, plength = 0;
 		unsigned char manufacturer[100], product[100]; //Just assume names are never longer than 100 chars
 		memset(manufacturer, 0, 100);
 		memset(product, 0, 100);

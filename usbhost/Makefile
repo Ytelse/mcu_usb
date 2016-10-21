@@ -9,6 +9,13 @@ TARGET:=ytelse_usbhost
 OBJDIR:=build
 SRCDIR:=src
 
+# ANSI color codes
+# Only used for fancy output
+NO_COLOR=\x1b[0m
+RED:=\x1b[31m
+GREEN:=\x1b[32m
+YELLOW:=\x1b[33m
+
 ################
 # TOOLCHAIN
 ################
@@ -64,11 +71,11 @@ run : $(TARGET)
 	./$(TARGET)
 
 $(TARGET) : $(OBJS)
-	@echo "Linking target: $@"
+	@echo "$(YELLOW)Linking target: $@$(NO_COLOR)"
 	$(LD) $(LDFLAGS) -o $@ $(OBJS)
 
 $(OBJDIR)/%.o : %.c | $(OBJDIR)
-	@echo "Compiling source: $@"
+	@echo "$(YELLOW)Compiling source: $@$(NO_COLOR)"
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OBJDIR) :
