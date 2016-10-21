@@ -1,6 +1,7 @@
-#include "efm32_comm.h"
-#include "usb_helpers.h"
 #include "debug.h"
+#include "ytelse_comm.h"
+#include "usb_helpers.h"
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -66,7 +67,7 @@ void mainloop(libusb_context* context) {
 		/* Get device handle */
 		colorprint("Establishing connection to EFM32 USB device...", DEFAULT);
 		// Keep trying until it connects
-		while(get_efm32gg_usb_handle(context, &efm_handle));
+		while(get_ytelse_mcu_handle(context, &efm_handle));
 
 		debugprint("Successfully got EFM32 handle!", GREEN);
 		status = USB_DEVICE_FOUND;
@@ -126,7 +127,7 @@ void mainloop(libusb_context* context) {
 			TODO: Get commands from stdin and direct program flow from there
 		*/
 
-		testSendRecv(context, efm_handle, 1);
+		sendRecvWait(context, efm_handle);
 		status = USB_FINALIZE;
 	}
 	//Close connection to device
@@ -141,7 +142,7 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 		if (pendingWrite) {
 			debugprint("Message already waiting in queue!", RED);
 		} else {
-			sendMessage(efm_handle, tickMessage, tickMessageLength);
+			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
 			debugprint("Message sent!", GREEN);
 		}
 
@@ -150,7 +151,7 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 		} else {
 			debugprint("Setting up receive...", GREEN);
 			memset(receiveBuffer, 0, 512);
-			receiveMessage(efm_handle, receiveBuffer);
+			receiveAsyncMessage(efm_handle, receiveBuffer);
 		}
 
 		printf("receiveBuffer = %s\n", receiveBuffer);
@@ -158,6 +159,30 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 		libusb_handle_events(context);
 		usleep(500000);
 	}
+}
+
+void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
+	memset(receiveBuffer, 0, 512);
+	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
+	while (1) {
+		if (!pendingWrite) {
+			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
+			break;
+		}
+	}
+	debugprint("Message sent!", GREEN);
+	while (1) {
+		if (!pendingReceive) {
+			receiveAsyncMessage(efm_handle, receiveBuffer);
+			break;
+		}
+	}
+
+	while (pendingReceive) {
+		libusb_handle_events(context);
+	}
+
+	printf("receiveBuffer = %s\n", receiveBuffer);
 }
 
 void printStartupMsg(void) {

@@ -41,9 +41,9 @@ LDFLAGS:=$(LIBS) -lusb-1.0
 
 CSRC:= $(addprefix $(SRCDIR)/, \
 main.c \
-usb_helpers.c \
-efm32_comm.c \
 callbacks.c \
+usb_helpers.c \
+ytelse_comm.c \
 debug.c \
 )
 

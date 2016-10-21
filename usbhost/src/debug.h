@@ -1,3 +1,6 @@
+#ifndef __DEBUG_H_
+#define __DEBUG_H_
+
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_YELLOW  "\x1b[33m"
@@ -12,3 +15,5 @@ enum {RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, DEFAULT};
 void debugprint(char* string, int color);
 /* Print in specified color, no matter if DEBUG is defined */
 void colorprint(char* string, int color);
+
+#endif
