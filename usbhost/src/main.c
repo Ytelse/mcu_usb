@@ -10,17 +10,20 @@
 #include <unistd.h>
 #include <assert.h>
 #include <libusb.h>
+#include <ctype.h>
 
 // /* Data to send to device every tick */
-static unsigned char tickMessage[] = "tick";
+static unsigned char sendBuffer[512];
 static unsigned char receiveBuffer[512];
+
+static unsigned char tickMessage[] = "tick";
 static int tickMessageLength = 4;
 
 extern bool pendingWrite;
 extern bool pendingReceive;
 
 /* enum for main loop flow control */
-enum {
+enum state {
 	USB_FINALIZE,
 	USB_DEVICE_CONNECTED,
 	USB_DEVICE_DISCONNECTED,
@@ -31,10 +34,26 @@ enum {
 	USB_DEVICE_INTERFACE_NOT_FOUND
 };
 
+/* enum for run-time commands, add more as necessary */
+
+enum commands {
+	INVALID_CMD, 	/* No command selected */
+	TESTSEND,		/* Send 1 message to MCU */
+	TESTRECV,		/* Set up receive of 1 message from MCU */
+	TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
+	HELP, 			/* Print available commands */
+	QUIT			/* Quit the program */
+};
+
 /* Function prototypes */
 void mainloop(libusb_context* context);
+int commandloop(void);
+
 void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages);
+void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle);
+/* Print helpers */
 void printStartupMsg(void);
+void printHelpString(void);
 
 int main(void) {
 	printStartupMsg();
@@ -60,6 +79,8 @@ int main(void) {
 void mainloop(libusb_context* context) {
 
 	int status = USB_DEVICE_NOT_FOUND;
+	int cmd = INVALID_CMD;
+	int interface = 0;
 	int rc = 0;
 	libusb_device_handle* efm_handle = NULL;
 
@@ -73,7 +94,6 @@ void mainloop(libusb_context* context) {
 		status = USB_DEVICE_FOUND;
 
 		/* Claim device USB interface */
-		int interface = 0;
 		debugprint("Claiming EFM32 USB interface...", DEFAULT);
 		while(status != USB_DEVICE_INTERFACE_CLAIMED) {
 			// Request resource from OS 
@@ -123,15 +143,69 @@ void mainloop(libusb_context* context) {
 		}
 		colorprint("Connection established!", GREEN);
 
-		/* 
-			TODO: Get commands from stdin and direct program flow from there
-		*/
-
-		sendRecvWait(context, efm_handle);
+		while (cmd != QUIT) {
+			cmd = commandloop();
+			switch (cmd) {
+				case TESTSEND :
+					//ATM just fall through to testsendrecv
+					//break;
+				case TESTRECV :
+					//ATM just fall through to testsendrecv
+					//break;
+				case TESTSENDRECV :
+					sendRecvWait(context, efm_handle);
+					break;
+				case HELP :
+					printHelpString();
+					break;
+				case QUIT :
+					printf("Exiting...\n");
+					break;
+				default :
+					/* If unrecognized cmd, just quit. Should not happed */
+					cmd = QUIT;
+					printf("Exiting...\n");
+					break;
+			}
+		}
 		status = USB_FINALIZE;
 	}
+	//Release previously claimed interface
+	libusb_release_interface(efm_handle, interface);
 	//Close connection to device
 	libusb_close(efm_handle);
+}
+
+int commandloop() {
+	int cmd = INVALID_CMD;
+	char stringBuffer[64];
+	memset(stringBuffer, 0, 64);
+
+
+	while (cmd == INVALID_CMD) {
+		printf(">>> ");
+		fgets(stringBuffer, 64, stdin);
+
+		for (int i = 0; stringBuffer[i]; i++) {
+			stringBuffer[i] = tolower(stringBuffer[i]);
+		}
+
+		if (strcmp(stringBuffer, "testsend\n") == 0) {
+			cmd = TESTSEND;
+		} else if (strcmp(stringBuffer, "testrecv\n") == 0) {
+			cmd = TESTRECV;
+		} else if (strcmp(stringBuffer, "testsendrecv\n") == 0) {
+			cmd = TESTSENDRECV;
+		} else if (strcmp(stringBuffer, "help\n") == 0) {
+			cmd = HELP;
+		} else if (strcmp(stringBuffer, "quit\n") == 0) {
+			cmd = QUIT;
+		} else {
+			printf("Invalid command, try 'help'.\n");
+		}
+	}
+
+	return cmd;
 }
 
 void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages) {
@@ -204,6 +278,14 @@ void printStartupMsg(void) {
 	printf("*               DEBUG MODE                 *\n");
 	printf("********************************************\n");
 	#endif
+}
 
-
+void printHelpString(void) {
+	colorprint("Available commands: ", MAGENTA);
+	printf("testsend        --  Send 1 message to MCU\n");
+	printf("testrecv        --  Set up receive of 1 message from MCU\n");
+	printf("testsendrecv    --  Send and set up receive of 1 message to/from MCU\n");
+	printf("quit            --  Quit the program\n");
+	printf("help            --  Print list of available commands\n");
+	printf("\n");
 }
