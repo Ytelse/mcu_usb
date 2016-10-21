@@ -32,9 +32,8 @@ enum {
 
 /* Function prototypes */
 void mainloop(libusb_context* context);
+void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages);
 void printStartupMsg(void);
-void sendMsgs(libusb_device_handle* efm_handle, libusb_context* context);
-void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle);
 
 int main(void) {
 	printStartupMsg();
@@ -68,6 +67,7 @@ void mainloop(libusb_context* context) {
 		colorprint("Establishing connection to EFM32 USB device...", DEFAULT);
 		// Keep trying until it connects
 		while(get_efm32gg_usb_handle(context, &efm_handle));
+
 		debugprint("Successfully got EFM32 handle!", GREEN);
 		status = USB_DEVICE_FOUND;
 
@@ -107,28 +107,36 @@ void mainloop(libusb_context* context) {
 				status = USB_DEVICE_NOT_FOUND;
 				break;
 			} else {
-				debugprint("Successfully claimed EFM32 USB interface 0!", GREEN);
+				debugprint("Successfully claimed EFM32 USB interface!", GREEN);
 				status = USB_DEVICE_INTERFACE_CLAIMED;
 			}
 		}
 
+		char nameBuffer[200];
+		int nameLength = getDeviceName(efm_handle, nameBuffer, 200);
+		if (nameLength < 0) {
+			colorprint("Failed to get device name...", YELLOW);
+		} else {
+			colorprint("Connected to:", BLUE);
+			colorprint(nameBuffer, BLUE);
+		}
 		colorprint("Connection established!", GREEN);
 
 		/* 
 			TODO: Get commands from stdin and direct program flow from there
 		*/
 
-		testSendRecv(context, efm_handle);
+		testSendRecv(context, efm_handle, 1);
 		status = USB_FINALIZE;
 	}
 	//Close connection to device
 	libusb_close(efm_handle);
 }
 
-void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle) {
-	memset(receiveBuffer, '-', 512);
+void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages) {
+	memset(receiveBuffer, 0, 512);
 
-	for (int i = 0; i < 50; i++) {
+	for (int i = 0; i < num_messages; i++) {
 		debugprint("Attempting to send tick message to EFM32", BLUE);
 		if (pendingWrite) {
 			debugprint("Message already waiting in queue!", RED);
@@ -141,7 +149,7 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle) {
 			debugprint("Still waiting for message!", RED);
 		} else {
 			debugprint("Setting up receive...", GREEN);
-			memset(receiveBuffer, '-', 512);
+			memset(receiveBuffer, 0, 512);
 			receiveMessage(efm_handle, receiveBuffer);
 		}
 

@@ -80,3 +80,27 @@ void get_device_names(libusb_context* context) {
 	}
 	libusb_free_device_list(device_list, 1);
 }
+
+/* Returns length of name stored in stringBuffer, if return value < 0 the name fetching failed */
+/* Supplied buffer should be at least 200 bytes just to be sure */
+int getDeviceName(libusb_device_handle* dev_handle, char* stringBuffer, int bufferLength) {
+		int rc = 0, mlength = 0, plength = 0, nameLength = 0;
+		unsigned char manufacturer[100], product[100]; //Just assume names are never longer than 100 chars
+		memset(manufacturer, 0, 100);
+		memset(product, 0, 100);
+
+		/* Get name of connected device */
+		libusb_device* dev = libusb_get_device(dev_handle);
+		struct libusb_device_descriptor desc;
+		rc = libusb_get_device_descriptor(dev, &desc);
+		if (rc) {
+			/* TODO: Proper error handling? */
+			return -1;
+		}
+		mlength = libusb_get_string_descriptor_ascii(dev_handle, desc.iManufacturer, manufacturer, 100);
+		plength = libusb_get_string_descriptor_ascii(dev_handle, desc.iProduct, product, 100);
+		memcpy(stringBuffer, manufacturer, mlength);
+		memset(stringBuffer+mlength, ' ', 1);
+		memcpy(stringBuffer+mlength+1, product, plength+1); //+1 in order to get the null-terminator;
+		return mlength+plength+1; //+1 because of the space seperating the two strings
+}
