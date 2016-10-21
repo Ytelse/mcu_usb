@@ -34,7 +34,8 @@
 *.dSYM/
 *.su
 
-usbhost/usb_host
+usbhost/ytelse_usbhost
+usbhost/build
 usbdevice_stk/bin
 usbdevice_stk/lst
 usbdevice_stk/build
