@@ -159,12 +159,12 @@ void mainloop(libusb_context* context) {
 					printHelpString();
 					break;
 				case QUIT :
-					printf("Exiting...\n");
+					colorprint("Exiting...", YELLOW);
 					break;
 				default :
 					/* If unrecognized cmd, just quit. Should not happed */
 					cmd = QUIT;
-					printf("Exiting...\n");
+					colorprint("Exiting...", YELLOW);
 					break;
 			}
 		}
@@ -175,6 +175,11 @@ void mainloop(libusb_context* context) {
 	//Close connection to device
 	libusb_close(efm_handle);
 }
+
+/* 
+	Function to fetch commands from stdin in order to make the
+	program interactive. Just add commands as they are implemented.
+*/
 
 int commandloop() {
 	int cmd = INVALID_CMD;
@@ -190,15 +195,19 @@ int commandloop() {
 			stringBuffer[i] = tolower(stringBuffer[i]);
 		}
 
-		if (strcmp(stringBuffer, "testsend\n") == 0) {
+		stringBuffer[strcspn(stringBuffer, "\r\n")] = 0; //remove trailing newline
+
+		if (strcmp(stringBuffer, "testsend") == 0) {
 			cmd = TESTSEND;
-		} else if (strcmp(stringBuffer, "testrecv\n") == 0) {
+		} else if (strcmp(stringBuffer, "testrecv") == 0) {
 			cmd = TESTRECV;
-		} else if (strcmp(stringBuffer, "testsendrecv\n") == 0) {
+		} else if (strcmp(stringBuffer, "testsendrecv") == 0) {
 			cmd = TESTSENDRECV;
-		} else if (strcmp(stringBuffer, "help\n") == 0) {
+		} else if (strcmp(stringBuffer, "help") == 0) {
 			cmd = HELP;
-		} else if (strcmp(stringBuffer, "quit\n") == 0) {
+		} else if (strcmp(stringBuffer, "quit") == 0) {
+			cmd = QUIT;
+		} else  if (strcmp(stringBuffer, "exit") == 0) {
 			cmd = QUIT;
 		} else {
 			printf("Invalid command, try 'help'.\n");
@@ -208,6 +217,7 @@ int commandloop() {
 	return cmd;
 }
 
+/* Test function, sends 50 messages to USB device, and sets up continuous receives */
 void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages) {
 	memset(receiveBuffer, 0, 512);
 
@@ -235,6 +245,8 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 	}
 }
 
+/* Test function : send 1 message, recv 1 message */
+
 void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
 	memset(receiveBuffer, 0, 512);
 	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
@@ -259,6 +271,8 @@ void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
 	printf("receiveBuffer = %s\n", receiveBuffer);
 }
 
+/* Print convenience functions */
+
 void printStartupMsg(void) {
 
 	/* TODO: Horrible ASCII art, make it better */
@@ -281,11 +295,12 @@ void printStartupMsg(void) {
 }
 
 void printHelpString(void) {
+	printf("\n");
 	colorprint("Available commands: ", MAGENTA);
 	printf("testsend        --  Send 1 message to MCU\n");
 	printf("testrecv        --  Set up receive of 1 message from MCU\n");
 	printf("testsendrecv    --  Send and set up receive of 1 message to/from MCU\n");
-	printf("quit            --  Quit the program\n");
+	printf("quit, exit      --  Quit the program\n");
 	printf("help            --  Print list of available commands\n");
 	printf("\n");
 }
