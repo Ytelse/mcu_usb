@@ -40,6 +40,7 @@ enum commands {
 	INVALID_CMD, 	/* No command selected */
 	TESTSEND,		/* Send 1 message to MCU */
 	TESTRECV,		/* Set up receive of 1 message from MCU */
+	TESTRECV10, 	/* Set up receive of 10 messages from MCU */
 	TESTSENDRECV,	/* Send and set up receive of 1 message to/from MCU */
 	HELP, 			/* Print available commands */
 	QUIT			/* Quit the program */
@@ -49,8 +50,14 @@ enum commands {
 void mainloop(libusb_context* context);
 int commandloop(void);
 
+/* Test functions */
+void sendTick(libusb_context* context, libusb_device_handle* efm_handle);
+void testRecv(libusb_context* context, libusb_device_handle* efm_handle);
 void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int num_messages);
 void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle);
+void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs);
+
+
 /* Print helpers */
 void printStartupMsg(void);
 void printHelpString(void);
@@ -147,11 +154,14 @@ void mainloop(libusb_context* context) {
 			cmd = commandloop();
 			switch (cmd) {
 				case TESTSEND :
-					//ATM just fall through to testsendrecv
-					//break;
+					sendTick(context, efm_handle);
+					break;
 				case TESTRECV :
-					//ATM just fall through to testsendrecv
-					//break;
+					testRecv(context, efm_handle);
+					break;
+				case TESTRECV10 :
+					receiveNMsgs(context, efm_handle, 10);
+					break;
 				case TESTSENDRECV :
 					sendRecvWait(context, efm_handle);
 					break;
@@ -199,9 +209,19 @@ int commandloop() {
 
 		if (strcmp(stringBuffer, "testsend") == 0) {
 			cmd = TESTSEND;
+		} else if (strcmp(stringBuffer, "ts") == 0) {
+			cmd = TESTSEND;
 		} else if (strcmp(stringBuffer, "testrecv") == 0) {
 			cmd = TESTRECV;
+		} else if (strcmp(stringBuffer, "tr") == 0) {
+			cmd = TESTRECV;
+		} else if (strcmp(stringBuffer, "testrecv10") == 0) {
+			cmd = TESTRECV10;
+		} else if (strcmp(stringBuffer, "tr10") == 0) {
+			cmd = TESTRECV10;
 		} else if (strcmp(stringBuffer, "testsendrecv") == 0) {
+			cmd = TESTSENDRECV;
+		} else if (strcmp(stringBuffer, "tsr") == 0) {
 			cmd = TESTSENDRECV;
 		} else if (strcmp(stringBuffer, "help") == 0) {
 			cmd = HELP;
@@ -245,10 +265,38 @@ void testSendRecv(libusb_context* context, libusb_device_handle* efm_handle, int
 	}
 }
 
+void sendTick(libusb_context* context, libusb_device_handle* efm_handle) {
+	while (1) {
+		if (!pendingWrite) {
+			sendAsyncMessage(efm_handle, tickMessage, tickMessageLength);
+			break;
+		}
+	}
+
+	while (pendingWrite) {
+		libusb_handle_events(context);
+	}
+}
+
+void testRecv(libusb_context* context, libusb_device_handle* efm_handle) {
+	while(1) {
+		if (!pendingReceive) {
+			memset(receiveBuffer, 0, 512);
+			receiveAsyncMessage(efm_handle, receiveBuffer);
+			break;
+		}
+	}
+
+	while(pendingReceive) {
+		libusb_handle_events(context);
+	}
+
+	printf("Received message: %s\n", receiveBuffer);
+}
+
 /* Test function : send 1 message, recv 1 message */
 
 void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
-	memset(receiveBuffer, 0, 512);
 	debugprint("Attempting to send tick message to Ytelse MCU", BLUE);
 	while (1) {
 		if (!pendingWrite) {
@@ -259,6 +307,7 @@ void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
 	debugprint("Message sent!", GREEN);
 	while (1) {
 		if (!pendingReceive) {
+			memset(receiveBuffer, 0, 512);
 			receiveAsyncMessage(efm_handle, receiveBuffer);
 			break;
 		}
@@ -268,7 +317,24 @@ void sendRecvWait(libusb_context* context, libusb_device_handle* efm_handle) {
 		libusb_handle_events(context);
 	}
 
-	printf("receiveBuffer = %s\n", receiveBuffer);
+	printf("Received message: %s\n", receiveBuffer);
+}
+
+void receiveNMsgs(libusb_context* context, libusb_device_handle* efm_handle, int num_recvs) {
+
+	for (int i = 0; i < num_recvs; i++) {
+		while (1) {
+			if (!pendingReceive) {
+				memset(receiveBuffer, 0, 512);
+				receiveAsyncMessage(efm_handle, receiveBuffer);
+				break;
+			}
+		}
+		while (pendingReceive) {
+			libusb_handle_events(context);
+		}
+		printf("Received message: %s\n", receiveBuffer);
+	}
 }
 
 /* Print convenience functions */
@@ -297,10 +363,11 @@ void printStartupMsg(void) {
 void printHelpString(void) {
 	printf("\n");
 	colorprint("Available commands: ", MAGENTA);
-	printf("testsend        --  Send 1 message to MCU\n");
-	printf("testrecv        --  Set up receive of 1 message from MCU\n");
-	printf("testsendrecv    --  Send and set up receive of 1 message to/from MCU\n");
-	printf("quit, exit      --  Quit the program\n");
-	printf("help            --  Print list of available commands\n");
+	printf("testsend, ts        --  Send 1 message to MCU\n");
+	printf("testrecv, tr        --  Set up receive of 1 message from MCU\n");
+	printf("testrecv10, tr10    --  Set up receive of 10 messages from MCU\n");
+	printf("testsendrecv, tsr   --  Send and set up receive of 1 message to/from MCU\n");
+	printf("quit, exit          --  Quit the program\n");
+	printf("help                --  Print list of available commands\n");
 	printf("\n");
 }
